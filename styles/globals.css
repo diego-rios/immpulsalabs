@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Improve smooth scrolling */
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Improve section spacing */
+section {
+  scroll-margin-top: 100px;
+}
+
+/* Better touch interactions */
+@media (hover: none) {
+  .hover\:scale-105 {
+    transform: none !important;
+  }
+}
+
+/* Improved typography scaling */
+@layer base {
+  h1 {
+    @apply text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight;
+  }
+  h2 {
+    @apply text-2xl sm:text-3xl md:text-4xl font-bold;
+  }
+  h3 {
+    @apply text-xl sm:text-2xl font-semibold;
+  }
+  p {
+    @apply text-base sm:text-lg;
+  }
+}
+
+/* Custom scrollbar */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+  }
+}
+
+/* Better focus styles */
+@layer base {
+  :focus-visible {
+    @apply outline-none ring-2 ring-[#7F4FFF] ring-offset-2 ring-offset-black;
+  }
+}
+
+/* Responsive padding adjustments */
+.container {
+  @apply px-4 sm:px-6 lg:px-8;
+}
+
+/* Touch-friendly buttons */
+button,
+a[role="button"] {
+  @apply min-h-[44px] min-w-[44px];
+}
+
+/* Improved mobile form elements */
+input,
+select,
+textarea {
+  @apply text-base;
+  font-size: 16px !important;
+}
+
