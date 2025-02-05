@@ -4,6 +4,7 @@ import "./globals.css"
 import { ExitIntentPopup } from "@/components/exit-intent-popup"
 import { headers } from "next/headers"
 import type React from "react" // Import React
+import { ClientLayout } from "./client-layout"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -51,21 +52,21 @@ export const metadata: Metadata = {
   },
 }
 
+// Set security headers in middleware instead
+// headers({
+//   "X-XSS-Protection": "1; mode=block",
+//   "X-Frame-Options": "SAMEORIGIN",
+//   "X-Content-Type-Options": "nosniff",
+//   "Referrer-Policy": "strict-origin-when-cross-origin",
+//   "Content-Security-Policy":
+//     "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:; media-src 'self' https:; object-src 'none'; frame-src 'self' https:; worker-src 'self' blob:;",
+// })
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  // Set security headers
-  headers({
-    "X-XSS-Protection": "1; mode=block",
-    "X-Frame-Options": "SAMEORIGIN",
-    "X-Content-Type-Options": "nosniff",
-    "Referrer-Policy": "strict-origin-when-cross-origin",
-    "Content-Security-Policy":
-      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:; media-src 'self' https:; object-src 'none'; frame-src 'self' https:; worker-src 'self' blob:;",
-  })
-
   return (
     <html lang="es" className="scroll-smooth">
       <head>
@@ -76,8 +77,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#111111" />
       </head>
       <body className={inter.className}>
-        {children}
-        <ExitIntentPopup />
+        <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
   )

@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { X, ChevronDown, ChevronUp } from "lucide-react"
+import { X, ChevronDown, ChevronUp, Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { GradientButton } from "@/components/ui/gradient-button"
 import { parsePhoneNumber, isValidPhoneNumber } from "libphonenumber-js/min"
 import { sanitizeInput } from "@/utils/security"
+import { toast } from "sonner"
 
 // Country codes data with flags
 const countryCodes = [
@@ -33,6 +34,8 @@ export function ExitIntentPopup() {
   })
   const [phoneError, setPhoneError] = useState("")
   const [csrfToken, setCSRFToken] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout
@@ -64,11 +67,16 @@ export function ExitIntentPopup() {
       .then((data) => {
         setCSRFToken(data.csrfToken)
       })
+      .catch((error) => {
+        console.error("Error fetching CSRF token:", error)
+        setSubmitError("Error de conexión. Por favor, inténtalo de nuevo.")
+      })
   }, [])
 
   const handleClose = () => {
     setIsVisible(false)
     setPhoneError("")
+    setSubmitError(null)
   }
 
   const validatePhoneNumber = (number: string, countryCode: string) => {
@@ -105,15 +113,23 @@ export function ExitIntentPopup() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (validatePhoneNumber(formData.whatsapp, selectedCountry.code)) {
+    setSubmitError(null)
+    
+    if (!validatePhoneNumber(formData.whatsapp, selectedCountry.code)) {
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
       const sanitizedFormData = {
         nombre: sanitizeInput(formData.nombre),
         apellido: sanitizeInput(formData.apellido),
         email: sanitizeInput(formData.email),
         whatsapp: sanitizeInput(formData.whatsapp),
+        countryCode: selectedCountry.code,
       }
 
-      // Send form data to server with CSRF token
       const response = await fetch("/api/submit-form", {
         method: "POST",
         headers: {
@@ -123,17 +139,39 @@ export function ExitIntentPopup() {
         body: JSON.stringify(sanitizedFormData),
       })
 
-      if (response.ok) {
-        // Format the message with sanitized form data
-        const message = `Hola, soy ${sanitizedFormData.nombre} ${sanitizedFormData.apellido}. Me gustaría obtener más información sobre el desarrollo de mi MVP.`
-        const encodedMessage = encodeURIComponent(message)
-        // Redirect to WhatsApp
+      const result = await response.json()
+
+      if (!response.ok) {
+        if (response.status === 409) {
+          setSubmitError("Ya hemos recibido tu información. Te contactaremos pronto.")
+          return
+        }
+        throw new Error(result.error || "Error al enviar el formulario")
+      }
+
+      // Format the message with sanitized form data
+      const message = `Hola, soy ${sanitizedFormData.nombre} ${sanitizedFormData.apellido}. Me gustaría obtener más información sobre el desarrollo de mi MVP.`
+      const encodedMessage = encodeURIComponent(message)
+      
+      // Show success message
+      toast.success("¡Información enviada con éxito!", {
+        description: "Te redirigiremos a WhatsApp para continuar la conversación.",
+      })
+
+      // Redirect to WhatsApp after a short delay
+      setTimeout(() => {
         window.open(`https://wa.me/573158558697?text=${encodedMessage}`, "_blank")
         handleClose()
-      } else {
-        // Handle error
-        console.error("Form submission failed")
-      }
+      }, 1500)
+    } catch (error) {
+      console.error("Error submitting form:", error)
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "Error al enviar el formulario. Por favor, inténtalo de nuevo."
+      )
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -182,6 +220,12 @@ export function ExitIntentPopup() {
               Déjame tus datos y te contacto por WhatsApp. No pierdas más tiempo y haz realidad tus ideas.
             </p>
 
+            {submitError && (
+              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">
+                {submitError}
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -195,6 +239,7 @@ export function ExitIntentPopup() {
                     value={formData.nombre}
                     onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                     className="bg-black/40 border-white/10 text-white placeholder:text-gray-500"
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div>
@@ -208,6 +253,7 @@ export function ExitIntentPopup() {
                     value={formData.apellido}
                     onChange={(e) => setFormData({ ...formData, apellido: e.target.value })}
                     className="bg-black/40 border-white/10 text-white placeholder:text-gray-500"
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
@@ -225,6 +271,7 @@ export function ExitIntentPopup() {
                   placeholder="tu@email.com"
                   pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
                   autoComplete="email"
+                  disabled={isSubmitting}
                 />
               </div>
               <div className="grid grid-cols-[120px_1fr] gap-4">
@@ -236,6 +283,7 @@ export function ExitIntentPopup() {
                     type="button"
                     onClick={() => setIsCountryListOpen(!isCountryListOpen)}
                     className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-md flex items-center justify-between text-left text-white"
+                    disabled={isSubmitting}
                   >
                     <span>
                       {selectedCountry.flag} {selectedCountry.code}
@@ -264,6 +312,7 @@ export function ExitIntentPopup() {
                               }
                             }}
                             className="w-full px-4 py-3 text-left hover:bg-white/5 flex items-center gap-3 transition-colors"
+                            disabled={isSubmitting}
                           >
                             <span className="text-lg">{country.flag}</span>
                             <span className="text-base font-medium text-white">{country.code}</span>
@@ -294,6 +343,7 @@ export function ExitIntentPopup() {
                       maxLength={15}
                       pattern="[0-9]*"
                       inputMode="numeric"
+                      disabled={isSubmitting}
                     />
                     {phoneError && <p className="text-red-500 text-sm">{phoneError}</p>}
                   </div>
@@ -303,9 +353,16 @@ export function ExitIntentPopup() {
               <GradientButton
                 type="submit"
                 className="w-full py-4 sm:py-6 text-base sm:text-lg font-medium"
-                disabled={!!phoneError || formData.whatsapp.length < 10}
+                disabled={!!phoneError || formData.whatsapp.length < 10 || isSubmitting}
               >
-                ¡Quiero Comenzar Ahora en WhatsApp! →
+                {isSubmitting ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Enviando...</span>
+                  </div>
+                ) : (
+                  "¡Quiero Comenzar Ahora en WhatsApp! →"
+                )}
               </GradientButton>
             </form>
           </div>
